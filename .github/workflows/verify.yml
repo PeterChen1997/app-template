@@ -1,0 +1,63 @@
+# 验证三连：类型、lint、测试。PR 与 master 推送必过。
+#
+# 为什么值得有：lint 门禁一旦因为存量 error 长期恒红，就没人再看它，
+# 新错误混进来也发现不了。CI 让「全绿」成为可观测的默认状态。
+#
+# Node 版本建议对齐真正会构建发布包的那个环境（EAS 的话看 eas.json）。
+# 数据层测试用的 node-sqlite3-wasm 是纯 WASM，不需要原生编译，不受 node 版本约束。
+
+name: verify
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+# 同一分支的新提交取消上一次未跑完的运行，别排队浪费额度
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: pnpm
+
+      # --frozen-lockfile：lockfile 与 package.json 对不上时直接失败，
+      # 而不是悄悄装一套和本地不同的依赖
+      - run: pnpm install --frozen-lockfile
+
+      - name: 类型检查
+        run: pnpm exec tsc --noEmit
+
+      - name: Lint
+        run: pnpm exec eslint src tests
+
+      - name: 单元测试
+        run: pnpm test
+
+      # 红线自查占位：每个 App 定自己的清单。
+      # 原则：凡是「某个文件里绝不该出现某个东西」（泄露的凭据注入路径、私有域名、
+      # 缺失的 __DEV__ 阻断、被改掉的 ATS 声明），都值得一条 grep/node -e 钉死——
+      # 这些坏法 tsc/eslint/jest 全都不管，破防的代价却是审核被拒或凭据泄露。
+      # 示例（来自 chatme，按需改写）：
+      #   ! grep -rn "my-private-domain\.example" src/
+      #   node -e "const c=require('./app.json').expo.ios.infoPlist.NSAppTransportSecurity; if(c.NSAllowsArbitraryLoads!==false) throw new Error('NSAllowsArbitraryLoads 必须显式为 false')"
+      - name: 上架红线自查（占位）
+        run: |
+          set -e
+          echo "→ ATS 必须显式钉在 app.json 里（不能退回 prebuild 模板默认）"
+          node -e "const c=require('./app.json').expo.ios.infoPlist.NSAppTransportSecurity; if(c.NSAllowsArbitraryLoads!==false) throw new Error('NSAllowsArbitraryLoads 必须显式为 false')"
+          echo "→ 出口合规声明必须在"
+          node -e "if(require('./app.json').expo.ios.config.usesNonExemptEncryption!==false) throw new Error('缺 usesNonExemptEncryption')"

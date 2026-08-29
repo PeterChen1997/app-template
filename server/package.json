@@ -1,0 +1,27 @@
+{
+  "name": "app-template-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "模板仓库可选后端骨架：Fastify + Drizzle 双驱动（PG / PGLite），device pairing 鉴权",
+  "packageManager": "pnpm@9.6.0",
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=.env src/index.ts",
+    "start": "tsx src/index.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx tests/auth.test.ts && tsx tests/entities.test.ts"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.3.4",
+    "drizzle-orm": "^0.44.2",
+    "fastify": "^5.3.2",
+    "pg": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "@types/pg": "^8.11.11",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3"
+  }
+}

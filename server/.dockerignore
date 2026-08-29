@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+pglite-data
+tests
+scripts
+README.md
+*.log

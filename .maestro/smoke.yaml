@@ -1,0 +1,10 @@
+# 最小冒烟：App 能启动、首页能渲染。
+# 运行：JAVA_HOME=/opt/homebrew/opt/openjdk maestro --udid <UDID> test .maestro/smoke.yaml
+#
+# 锚点是 src/app/index.tsx 根 View 的 testID，改名要两边一起改。
+appId: __BUNDLE_ID__
+---
+- launchApp:
+    clearState: false
+- assertVisible:
+    id: 'home-screen'
