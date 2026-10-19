@@ -5,14 +5,14 @@
 
 ## 环境要点
 
-- Metro 端口：__METRO_PORT__（独占）；专用模拟器：（型号 + UDID）
+- Metro 端口：__METRO_PORT__（rn-metro 登记表独占，起 Metro 走 /rn-metro）；专用模拟器：`__APP_NAME__ iOS<N>` ×2（UDID 见 CLAUDE.md）
 - 构建：Development Build，不用 Expo Go；`ios/` 是 prebuild 产物且 gitignore
 - 验证入口：`pnpm verify`（typecheck + lint + jest）
-- 模板版本：template v0.1.0
+- 模板版本：template v0.2.0
 
 ## 当前状态
 
-- （日期）从 app-template v0.1.0 初始化，`pnpm verify` 全绿。
+- （日期）从 app-template v0.2.0 初始化，`pnpm verify` 全绿。
 
 ## 下一步任务
 

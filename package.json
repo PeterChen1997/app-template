@@ -1,7 +1,7 @@
 {
   "name": "app-template",
   "main": "expo-router/entry",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "dependencies": {
     "expo": "~57.0.27",
     "expo-build-properties": "~57.0.22",
