@@ -35,6 +35,29 @@ if ! printf '%s' "$METRO_PORT" | grep -Eq '^[0-9]+$'; then
   exit 1
 fi
 
+if [ "$METRO_PORT" = "8081" ]; then
+  echo "8081 不分配给任何项目（rn-metro 约定），换一个登记过的端口" >&2
+  exit 1
+fi
+
+# Metro 端口以全局登记表为准（rn-metro skill）。这里只读不写：
+# 登记表是多项目共享的真相源，写入交给 `metro.sh port` 自己做。
+PORTS_TSV="${HOME}/.claude/skills/rn-metro/ports.tsv"
+PORT_REGISTERED=unknown
+if [ -f "${PORTS_TSV}" ]; then
+  OWNER=$(awk -F'\t' -v p="${METRO_PORT}" '!/^#/ && $1 == p {print $2}' "${PORTS_TSV}")
+  if [ -z "${OWNER}" ]; then
+    PORT_REGISTERED=no
+  elif [ "${OWNER}" = "$(cd "${ROOT}" && pwd -P)" ]; then
+    PORT_REGISTERED=yes
+  else
+    echo "端口 ${METRO_PORT} 已登记给 ${OWNER}——换端口。推荐先在项目根目录跑" >&2
+    echo "  ~/.claude/skills/rn-metro/metro.sh port" >&2
+    echo "让它分配并登记一个端口，再把那个端口传给本脚本。" >&2
+    exit 1
+  fi
+fi
+
 # 占位符可能散落在配置、源码与文档里（app.json / package.json / .maestro /
 # src/** / docs/** / CLAUDE.md ...），直接全仓扫，跳过 node_modules 与 .git，
 # 也跳过本脚本自己（脚本正文里引用占位符是说明，不是待替换点）。
@@ -61,9 +84,19 @@ replace_all "__METRO_PORT__" "$METRO_PORT"
 echo ""
 echo "✓ 占位符替换完成。接下来："
 echo "  1. review diff：git diff"
-echo "  2. 给本项目分配一台专用模拟器并记下 UDID（多项目并行时不共用），"
-echo "     配合 Metro 端口 $METRO_PORT 使用："
-echo "       xcrun simctl list devices | grep -i booted"
-echo "       pnpm ios -- --udid <UDID>"
-echo "  3. 把分配结果写进项目自己的开发文档（哪台模拟器、哪个端口）"
+case "${PORT_REGISTERED}" in
+  no)
+    echo "  2. ⚠️  Metro 端口 ${METRO_PORT} 还没在 rn-metro 登记表里。在项目根目录跑："
+    echo "       ~/.claude/skills/rn-metro/metro.sh port"
+    echo "     它会登记一个端口；若与 ${METRO_PORT} 不同，以它为准改 package.json 与 CLAUDE.md。"
+    echo "     起 Metro 一律走 /rn-metro（metro.sh start），不要裸跑 expo start。" ;;
+  yes)
+    echo "  2. Metro 端口 ${METRO_PORT} 已在 rn-metro 登记表里，起 Metro 走 /rn-metro（metro.sh start）。" ;;
+  *)
+    echo "  2. 没找到 rn-metro 登记表（~/.claude/skills/rn-metro/ports.tsv），自行确认端口 ${METRO_PORT} 不与其他项目冲突。" ;;
+esac
+echo "  3. 建本项目专用模拟器（最新 iOS 大版本 + 上一大版本，命名「${APP_NAME} iOS<N>」）："
+echo "       ./scripts/sim-setup.sh"
+echo "     把输出的 UDID 登记进 CLAUDE.md「专用模拟器」一节；不往别的项目的模拟器上装包。"
 echo "  4. pnpm install && pnpm verify"
+echo "  5. 首次 E2E：pnpm exec expo prebuild -p ios && ./scripts/build-sim-release.sh && ./scripts/e2e-all.sh"

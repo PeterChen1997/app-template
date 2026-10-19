@@ -1,0 +1,18 @@
+# 冷启动 → 首页渲染。
+#
+# 这条 flow 的价值不在断言多，而在它是其余所有 flow 的前提：它红了说明壳路径坏了，
+# 后面的失败都不用看。新 App 在这里补「首页核心控件都在」的断言（一律 testID 定位）。
+#
+# 锚点是 src/app/index.tsx 根 View 的 testID，改名要两边一起改。
+# 单跑：JAVA_HOME=/opt/homebrew/opt/openjdk maestro test --udid <UDID> .maestro/01_smoke.yaml
+# 全套：scripts/e2e-all.sh（Release 包、专用模拟器、双系统，见 TESTING.md）
+appId: __BUNDLE_ID__
+tags:
+  - smoke
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: 'home-screen'
+    timeout: 15000

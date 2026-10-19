@@ -1,6 +1,6 @@
 // 占位首页：演示文案（useStrings）与 token 的取用方式。新 App 从这里开始替换。
 //
-// 根 View 的 testID 是 .maestro/smoke.yaml 的锚点，改名要连冒烟流程一起改。
+// 根 View 的 testID 是 .maestro/01_smoke.yaml 的锚点，改名要连冒烟流程一起改。
 
 import { StyleSheet, View } from 'react-native';
 

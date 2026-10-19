@@ -59,5 +59,7 @@ jobs:
           set -e
           echo "→ ATS 必须显式钉在 app.json 里（不能退回 prebuild 模板默认）"
           node -e "const c=require('./app.json').expo.ios.infoPlist.NSAppTransportSecurity; if(c.NSAllowsArbitraryLoads!==false) throw new Error('NSAllowsArbitraryLoads 必须显式为 false')"
+          echo "→ UIScene 支持必须开着（Xcode 27 / iOS 27 SDK 无 UIScene = iOS 27 启动即崩）"
+          node -e "const p=require('./app.json').expo.plugins.find((x)=>Array.isArray(x)&&x[0]==='expo-build-properties'); if(!p||p[1].ios.enableSceneSupport!==true) throw new Error('expo-build-properties.ios.enableSceneSupport 必须为 true')"
           echo "→ 出口合规声明必须在"
           node -e "if(require('./app.json').expo.ios.config.usesNonExemptEncryption!==false) throw new Error('缺 usesNonExemptEncryption')"

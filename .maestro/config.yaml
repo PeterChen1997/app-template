@@ -1,0 +1,10 @@
+# Maestro 工作区配置。
+#
+# 约定：
+# - 顶层 NN_<场景>.yaml 是独立 flow，按编号顺序跑（scripts/e2e-all.sh 逐条跑、逐条记 PASS / FAIL）；
+# - subflows/ 里是被 runFlow 引用的子流程，不单独跑；
+# - 依赖 __DEV__ 入口的 flow 打 `debug-only` tag，Release 全套自动跳过，需装 Debug 包单跑。
+flows:
+  - '*.yaml'
+excludeTags:
+  - debug-only
