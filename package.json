@@ -45,7 +45,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src tests",
     "test": "jest",
-    "verify": "pnpm run typecheck && pnpm run lint && pnpm test"
+    "verify": "pnpm run typecheck && pnpm run lint && pnpm test",
+    "gate": "bash scripts/gate.sh"
   },
   "private": true
 }
