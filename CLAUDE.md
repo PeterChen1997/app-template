@@ -19,15 +19,14 @@ pnpm verify                      # 以上三合一，唯一的「绿了才算完
 ~/.claude/skills/rn-metro/metro.sh start   # Metro（/rn-metro），固定 __METRO_PORT__，不要裸跑 expo start
 pnpm exec expo prebuild -p ios   # 改 app.json / plugins / modules / targets 后必跑
 cd ios && LANG=en_US.UTF-8 pod install   # 只增删 Swift 文件时的快路径
-scripts/sim-setup.sh             # 建 / 查本项目专用模拟器（最新 iOS 大版本 + 上一大版本）
 scripts/build-sim-release.sh     # Release 模拟器包 + 产物核验，末行 SIM_RELEASE_OK
-scripts/e2e-all.sh               # 两台专用模拟器：冷启动判活 + 截图 + 全套 Maestro，末行 E2E_ALL_OK
+scripts/e2e-all.sh               # 从模拟器池借一台 iOS 26：冷启动判活 + 截图 + 全套 Maestro，末行 E2E_ALL_OK
 ```
 
 - 改原生后的验证走 `/app-verify`；发版只走 `/app-release`（TestFlight 上传走 `/app-testflight`）。
 - E2E 只跑 Release 包，不需要 Metro；判据与约定见 TESTING.md。
 
-## 一·五、本机多项目共存（Metro 端口 / 专用模拟器）
+## 一·五、本机多项目共存（Metro 端口 / 模拟器池）
 
 **Metro 端口 = __METRO_PORT__**，唯一真相源是全局登记表 `~/.claude/skills/rn-metro/ports.tsv`：
 
@@ -36,16 +35,11 @@ scripts/e2e-all.sh               # 两台专用模拟器：冷启动判活 + 截
 2. 起 Metro 一律走 `/rn-metro`（`metro.sh start`）：端口被别的项目占着会报 `PORT_TAKEN`——查登记表，**不杀别人的 Metro**。
 3. `package.json` 的 `--port`、本文件、skill 里的端口必须与登记表一致；禁止依赖 Expo CLI「端口占用自动 +1」。
 
-**专用模拟器**（本项目自建、只给本项目用）：
+**模拟器从全局池借**（`/sim-pool`，`~/.claude/skills/sim-pool/pool.sh`），本项目不自建、不登记固定 UDID：
 
-| 名字 | 系统 | UDID |
-|---|---|---|
-| `__APP_NAME__ iOS<最新大版本>` | iOS 27.x | （`scripts/sim-setup.sh` 输出后填） |
-| `__APP_NAME__ iOS<上一大版本>` | iOS 26.x | （同上） |
-
-- 命名固定 `<App> iOS<N>`，`scripts/e2e-all.sh` 默认按这个名字找两台；不往别的项目的模拟器（或无主共享机）上装包。
-- 只建不删：别的项目的模拟器一律不动、不 shutdown、不 delete。模拟器整组消失（别的会话误删）时按同名重建并更新本表。
-- 新 iOS 大版本出来、装了 runtime 后重跑 `scripts/sim-setup.sh` 补建新的那台，并更新本表。
+- `scripts/e2e-all.sh` 不传设备时自动 `acquire` 一台 iOS 26 槽位、退出时 `release`；临时加跑 iOS 27 用 `E2E_RUNTIME=27`。
+- 手动借：`U=$(~/.claude/skills/sim-pool/pool.sh acquire --owner __APP_NAME__ --pid none)`，用完 `pool.sh release "$U"`。
+- 禁止 `xcrun simctl create`；不动别人借着的槽位、不关别人的模拟器。槽位共享，别假设上次装的包还在。
 - 多台模拟器同时 Booted 时，maestro / simctl 一律显式带 UDID。
 
 ## 一·六、iOS 发布硬规则（所有 iOS 项目适用，反复踩过）
@@ -56,9 +50,10 @@ scripts/e2e-all.sh               # 两台专用模拟器：冷启动判活 + 截
      且 Info.plist 没有 `UIApplicationSceneManifest`。
    - 本模板已处理：`expo ≥ 57.0.23` + `app.json` 里 `expo-build-properties` 的 `ios.enableSceneSupport: true`（SDK 58 起模板自带）。
      **不要删这一项**；`scripts/build-sim-release.sh` 与 `/app-testflight` 归档核验都会拦。
-2. **上传 TestFlight / 提审之前，必须在「最新 iOS 大版本」的模拟器上冷启动 Release 包并跑完 Maestro E2E**，
-   不能只在旧系统模拟器上跑——旧系统全绿、新系统一开就崩的包真实上过 TestFlight。升级 Xcode 后的第一个包尤其如此。
-   E2E 没跑或只跑了旧系统，就不许说「可以发布」。（`scripts/e2e-all.sh` 默认就是最新 + 上一大版本两台。）
+2. **上传 TestFlight / 提审之前，必须在 iOS 26 模拟器上冷启动 Release 包并跑完 Maestro E2E**（全局规则 12.1 / 14：
+   默认只跑一台 iOS 26，`scripts/e2e-all.sh` 从模拟器池借）。E2E 没跑，就不许说「可以发布」。
+   iOS 26 全绿不代表 iOS 27 能启动——旧系统全绿、新系统一开就崩的包真实上过 TestFlight，所以第 1 条的产物静态核验
+   必须看到通过；升级 Xcode 后的第一个包、或改了启动 / 生命周期相关原生配置时，提醒用户要不要 `E2E_RUNTIME=27` 临时加跑。
 3. **Apple Watch App 图标不能用黑色 / 近黑背景**：watchOS 把图标裁成圆形，黑底在表盘上看不出轮廓，
    App Review 按 Guideline 4 - Design 拒。带手表 target 的项目，手表图标单独出一张浅色或品牌色底的版本，
    不要直接复用深色的 iPhone 图标。

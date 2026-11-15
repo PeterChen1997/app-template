@@ -5,7 +5,7 @@
 
 ## 环境要点
 
-- Metro 端口：__METRO_PORT__（rn-metro 登记表独占，起 Metro 走 /rn-metro）；专用模拟器：`__APP_NAME__ iOS<N>` ×2（UDID 见 CLAUDE.md）
+- Metro 端口：__METRO_PORT__（rn-metro 登记表独占，起 Metro 走 /rn-metro）；模拟器：从全局池 `/sim-pool` 借（不自建）
 - 构建：Development Build，不用 Expo Go；`ios/` 是 prebuild 产物且 gitignore
 - 验证入口：`pnpm verify`（typecheck + lint + jest）
 - 模板版本：template v0.2.0

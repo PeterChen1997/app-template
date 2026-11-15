@@ -22,11 +22,10 @@ pnpm verify                 # typecheck + lint + jest，末尾 Tests: N passed�
   写给测试者看的人话；`/app-testflight` 流水线递增后会检查，没有直接 `CHANGELOG_MISSING` 退出。
 - 动了 `server/` 才跑 `cd server && pnpm test`。
 
-## 2. Release 模拟器包 + 两个系统冷启动
+## 2. Release 模拟器包 + 冷启动
 ```bash
 export PATH="/opt/homebrew/bin:$PATH" LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 pnpm exec expo prebuild -p ios                     # 改了原生 / app.json 才需要；看「Installing CocoaPods」后无 [!]
-scripts/sim-setup.sh                               # 确认专用模拟器在（最新大版本 + 上一大版本；只建不删）
 <E2E 需要的 EXPO_PUBLIC_* 开关> scripts/build-sim-release.sh   # 末行 SIM_RELEASE_OK
 ```
 `build-sim-release.sh` 已核验：bundle id 是本项目的、`DTSDKName` 为 `iphonesimulator27.x` 时必须有
@@ -36,17 +35,17 @@ scripts/sim-setup.sh                               # 确认专用模拟器在（
 ① 没闪退；② 首页关键控件 / 图标都在（新系统上 Release 包出现过图标整块消失、断言读无障碍标签照样绿的情况，
 截图不看等于没验）。
 
-## 3. 全套 E2E × 2（最新 iOS 大版本 + 上一大版本）
+## 3. 全套 E2E（iOS 26，模拟器从池子借）
 ```bash
-scripts/e2e-all.sh                                 # 默认跑「<App> iOS<最新>」与「<App> iOS<上一>」，串行
-# 某系统上环境跑不了的 flow 显式跳过并写原因（不许静默略过）：
-# E2E_SKIP="04 07" scripts/e2e-all.sh "<App> iOS27"
+scripts/e2e-all.sh                                 # 从全局模拟器池（/sim-pool）借一台 iOS 26，跑完归还
+# 临时加跑 iOS 27（只在用户要求时）；环境跑不了的 flow 显式跳过并写原因（不许静默略过）：
+# E2E_RUNTIME=27 E2E_SKIP="04 07" scripts/e2e-all.sh
 ```
 - 判据：末行 `E2E_ALL_OK`；每台的 `cold-launch` 为 PASS；`summary.txt` 里每条 flow 都是 PASS 或带原因的 SKIP。
-- **两台串行，别并行**，也别与 xcodebuild / gradle 并行（并行时驱动卡死、点击落空，全是假红）。
+- **多台串行，别并行**，也别与 xcodebuild / gradle 并行（并行时驱动卡死、点击落空，全是假红）。
 - 失败先看 `<结果目录>/<设备>/<flow>.log` 与同名目录里的截图，分清「flow 过时」「环境」「真回归」：
   真回归不许发；flow 过时就修 flow 再跑；环境问题换路径验证，并写进汇报。
-- 只在旧系统上全绿**不算数**：iOS 27 启动即崩的包就是这样上的 TestFlight。
+- iOS 26 全绿不代表 iOS 27 能启动（iOS 27 启动即崩的包就是这样上的 TestFlight）：第 2 步的产物静态核验必须通过。
 
 ## 4. 手表 App 图标（有 watch target 才做）
 - 手表图标**不能用黑色 / 近黑背景**：watchOS 把图标裁成圆形，黑底在表盘上看不出轮廓，App Review 按 Guideline 4 - Design 拒。

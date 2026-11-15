@@ -22,7 +22,7 @@ SQLite migration + 双语 i18n + 主题 token + 脱敏 logger + jest 测试基�
 | 状态 | zustand 仅存 UI/运行态；持久态走 SQLite Repository |
 | 持久层 | expo-sqlite（WAL），裸 SQL migration（`PRAGMA user_version`），无 ORM |
 | 密钥 | expo-secure-store（Keychain），DB 只存 ref |
-| 测试 | jest（客户端）+ tsx 向量测试（server）+ Maestro（E2E，Release 包 × 最新 / 上一 iOS 大版本两台专用模拟器） |
+| 测试 | jest（客户端）+ tsx 向量测试（server）+ Maestro（E2E，Release 包，模拟器从全局池 /sim-pool 借 iOS 26） |
 | 后端（可选） | Fastify 5 + Drizzle 语义的 PgSQL schema，pg / PGLite 双驱动 |
 
 ## 新项目启动
@@ -32,13 +32,12 @@ git clone <this-repo> my-app && cd my-app
 rm -rf .git && git init -b master
 ~/.claude/skills/rn-metro/metro.sh port   # 先在 rn-metro 登记表分配本项目的 Metro 端口（不用 8081）
 ./scripts/init.sh   # 替换 __APP_NAME__ / __BUNDLE_ID__ / __SCHEME__ / __METRO_PORT__（只读校验端口登记）
-./scripts/sim-setup.sh   # 建本项目专用模拟器「<App> iOS<N>」×2
 pnpm install && pnpm verify
 ```
 
 然后按 checklist 走（完整版见 `docs/实施技术方案.md` 附录）：
 
-1. Metro 端口以 `~/.claude/skills/rn-metro/ports.tsv` 为准（起 Metro 走 `/rn-metro`）；专用模拟器 UDID 登记进 `CLAUDE.md`「本机多项目共存」。
+1. Metro 端口以 `~/.claude/skills/rn-metro/ports.tsv` 为准（起 Metro 走 `/rn-metro`）；模拟器不自建，从全局池 `/sim-pool` 借（`scripts/e2e-all.sh` 自动借还）。
 2. 写下本 App 的「领域铁律」，落成 `eslint.config.js` 里的规则（有标注好的规则位）。
 3. 补 `app.json`：privacyManifests 按实际用到的 API 调整、权限中文文案。
 4. 定 schema v1（只建有读写方的表），跑通 `pnpm verify` + `scripts/build-sim-release.sh` + `scripts/e2e-all.sh`。
@@ -53,7 +52,7 @@ pnpm verify        # typecheck + lint + test，唯一的「绿了才算完」入
 ~/.claude/skills/rn-metro/metro.sh start   # Metro（端口来自 rn-metro 登记表，每项目独占）
 pnpm exec expo prebuild -p ios   # 改 app.json / plugins / modules / targets 后必跑
 scripts/build-sim-release.sh     # Release 模拟器包 + 产物核验（DTSDKName / UIScene / Hermes bundle）
-scripts/e2e-all.sh               # 两台专用模拟器：冷启动判活 + 截图 + 全套 Maestro
+scripts/e2e-all.sh               # 模拟器池借一台 iOS 26：冷启动判活 + 截图 + 全套 Maestro
 ```
 
 ## 目录结构

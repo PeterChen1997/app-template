@@ -2,6 +2,14 @@
 
 > 模板自身的版本记录。基于模板的新项目可以删掉本文件；App 面向测试者的变更记录写 `docs/RELEASE_NOTES.md`。
 
+## 未发布 — 2026-11-15
+
+- **模拟器改为从全局模拟器池借**（`~/.claude/skills/sim-pool/pool.sh`，固定 5 个 iOS 26 槽位）：删除 `scripts/sim-setup.sh`；
+  `e2e-all.sh` 不传设备时 `acquire` 一台 iOS 26、退出时 `release`，`E2E_RUNTIME=27` 临时借 iOS 27；
+  CLAUDE.md / README / TESTING / app-release / app-verify 的「专用模拟器 ×2」说法同步改掉。
+- 验证（scratch 副本 `init.sh AppTemplate … 8189`）：`build-sim-release.sh` → `SIM_RELEASE_OK`（`iphonesimulator27.2`、
+  UIApplicationSceneManifest=yes）；`e2e-all.sh` 借到 Pool-1（iOS 26.5）→ cold-launch PASS、01_smoke PASS、`E2E_ALL_OK`，跑完槽位归还并关机。
+
 ## v0.2.0 — 2026-10-19
 
 对齐 tick-me / beatlock 的现行配置与发布闸门，重点是 Xcode 27 / iOS 27。

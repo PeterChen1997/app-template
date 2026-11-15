@@ -95,8 +95,6 @@ case "${PORT_REGISTERED}" in
   *)
     echo "  2. 没找到 rn-metro 登记表（~/.claude/skills/rn-metro/ports.tsv），自行确认端口 ${METRO_PORT} 不与其他项目冲突。" ;;
 esac
-echo "  3. 建本项目专用模拟器（最新 iOS 大版本 + 上一大版本，命名「${APP_NAME} iOS<N>」）："
-echo "       ./scripts/sim-setup.sh"
-echo "     把输出的 UDID 登记进 CLAUDE.md「专用模拟器」一节；不往别的项目的模拟器上装包。"
+echo "  3. 模拟器不自建：一律从全局模拟器池借（~/.claude/skills/sim-pool/pool.sh，/sim-pool），e2e-all.sh 会自动借还。"
 echo "  4. pnpm install && pnpm verify"
 echo "  5. 首次 E2E：pnpm exec expo prebuild -p ios && ./scripts/build-sim-release.sh && ./scripts/e2e-all.sh"

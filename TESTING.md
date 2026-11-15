@@ -7,7 +7,7 @@
 | 通道 | 工具 | 覆盖范围 | 入口 |
 |---|---|---|---|
 | 单元测试 | jest（node 环境 + 真 SQLite WASM） | core / application / infrastructure 纯逻辑、migration、guards、i18n、theme 契约 | `pnpm exec jest` |
-| E2E | Maestro（`.maestro/NN_*.yaml`） | App 进程内全部 UI 流程 + 冷启动判活 | `scripts/e2e-all.sh`（Release 包、两台专用模拟器） |
+| E2E | Maestro（`.maestro/NN_*.yaml`） | App 进程内全部 UI 流程 + 冷启动判活 | `scripts/e2e-all.sh`（Release 包、模拟器池借 iOS 26） |
 | 系统层 | `xcrun simctl` + 脚本 | 通知横幅、深链、App Group 等进程外行为 | 按需脚本 |
 | 真机手测 | 清单化 | 模拟器验不了的（DRM / 静音穿透 / 传感器等） | 见「四、真机清单」 |
 | server 单测 | tsx + node:assert 向量测试 | server/ 全部逻辑（fastify.inject + 内存 PGLite） | `cd server && pnpm test` |
@@ -27,11 +27,10 @@
 ## 二·五、E2E 怎么跑（发布闸门同款）
 
 ```bash
-scripts/sim-setup.sh                 # 一次性：建「<App> iOS<最新>」「<App> iOS<上一>」两台专用模拟器
 pnpm exec expo prebuild -p ios       # 改了原生 / app.json 才需要
 scripts/build-sim-release.sh         # Release 模拟器包；末行 SIM_RELEASE_OK
-scripts/e2e-all.sh                   # 默认两台串行；末行 E2E_ALL_OK 才算过
-scripts/e2e-all.sh "<App> iOS27"     # 只跑一台（名字精确匹配，或传 UDID）
+scripts/e2e-all.sh                   # 从全局模拟器池借一台 iOS 26，跑完归还；末行 E2E_ALL_OK 才算过
+E2E_RUNTIME=27 scripts/e2e-all.sh    # 临时加跑 iOS 27（池子临时建一台，跑完删除）
 ```
 
 - **不需要 Metro**：Release 包内嵌 bundle。
@@ -41,9 +40,9 @@ scripts/e2e-all.sh "<App> iOS27"     # 只跑一台（名字精确匹配，或�
   每条一个 `<flow>.log` + 同名目录（Maestro 截图与日志），汇总在 `<结果目录>/summary.txt`。
 - 某系统上环境跑不了的 flow 用 `E2E_SKIP="04 07"` 显式跳过，汇总里写 SKIP，**汇报必须说明原因**——不许静默略过。
 - 只对 `driver did not start up` / `Broken pipe` 这类驱动抖动补跑一次；其余失败不许靠重跑洗绿。
-- 两台串行，别与 xcodebuild / gradle 并行；多台 Booted 时一律带 UDID（脚本已带）。
+- 模拟器只从池子借（`~/.claude/skills/sim-pool/pool.sh`），不自己 `simctl create`；别与 xcodebuild / gradle 并行；多台 Booted 时一律带 UDID（脚本已带）。
 - flow 命名 `NN_<场景>.yaml`（编号即顺序），子流程放 `subflows/` 用 `runFlow` 引用。
-- 只在旧系统全绿**不算数**：发布前必须包含最新 iOS 大版本那台（见 CLAUDE.md「iOS 发布硬规则」）。
+- 默认只跑 iOS 26（全局规则 12.1）；iOS 26 全绿不代表 iOS 27 能启动，产物静态核验（见 CLAUDE.md「iOS 发布硬规则」）必须通过。
 
 ## 三、用例矩阵
 

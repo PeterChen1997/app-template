@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# 发布闸门的 E2E 部分：在专用模拟器上「冷启动 Release 包 + 跑完整套 Maestro flow」，默认两台各跑一遍。
+# 发布闸门的 E2E 部分：在模拟器上「冷启动 Release 包 + 跑完整套 Maestro flow」。
 #
 # 用法：
-#   scripts/e2e-all.sh                         # 默认：「<App> iOS<最新大版本>」+「<App> iOS<上一大版本>」
-#   scripts/e2e-all.sh "<App> iOS27"           # 指定模拟器名（精确匹配）或 UDID，可多个
-#   scripts/e2e-all.sh C11A2851-...-30E53618427C
+#   scripts/e2e-all.sh                         # 默认：从全局模拟器池（/sim-pool）借一台 iOS 26，跑完归还
+#   E2E_RUNTIME=27 scripts/e2e-all.sh          # 临时加跑 iOS 27：池子临时建一台，跑完删除
+#   scripts/e2e-all.sh C11A2851-...-30E53618427C   # 指定 UDID（或名字精确匹配），可多个——须是自己从池子借着的
 #
 # 前置：
-#   1. scripts/sim-setup.sh 建好专用模拟器（只用本项目自己的，不往别人的模拟器上装包）；
+#   1. 模拟器只从 ~/.claude/skills/sim-pool/pool.sh 借，不自己 simctl create；
 #   2. scripts/build-sim-release.sh 打好 Release 模拟器包（E2E 需要的 EXPO_PUBLIC_* 开关在打包时带上）。
 #   本脚本不需要、也不会启动 Metro——Release 包内嵌 bundle。
 #
@@ -15,9 +15,11 @@
 #   E2E_OUT          结果目录（默认 /tmp/<工程名>-e2e-<时间戳>）
 #   E2E_SKIP         显式跳过的 flow 前缀，如 "04 07"（某系统上环境跑不了的 flow）。
 #                    跳过会在汇总里写 SKIP，调用方必须在汇报里说明原因——不许静默略过。
+#   E2E_RUNTIME      不传设备时向池子借的 iOS 大版本（默认 26；其他版本是临时设备）
 #   E2E_APP          .app 路径（默认 ios/build-sim-release/Build/Products/Release-iphonesimulator/<工程名>.app）
 #   E2E_LAUNCH_WAIT  冷启动后等几秒再判活（默认 10）
-#   E2E_KEEP_BOOTED  =1 时不关闭本脚本启动的模拟器（默认跑完关掉；原本就开着的不动）
+#   E2E_KEEP_BOOTED  =1 时不关闭本脚本启动的模拟器（默认跑完关掉；原本就开着的不动）。
+#                    从池子借的设备跑完总是归还（归还即关机），不受此开关影响
 #
 # 每台设备的产物：<E2E_OUT>/<设备名>/cold-launch.png、<flow>.log、<flow>/（Maestro 截图与日志）、
 # 冷启动失败时的崩溃报告 crash-*.ips；汇总在 <E2E_OUT>/summary.txt。
@@ -74,29 +76,16 @@ resolve_udid() {
   ' "${arg}"
 }
 
-# 默认设备：本项目名下「<App> iOS<N>」里 N 最大的两台
-default_devices() {
-  xcrun simctl list devices -j | node -e '
-    const app = process.argv[1];
-    const all = JSON.parse(require("fs").readFileSync(0, "utf8")).devices;
-    const esc = app.replace(/[.*+?^$(){}|[\]\\]/g, "\\$&");
-    const re = new RegExp("^" + esc + " iOS(\\d+)$");
-    const seen = new Map();
-    for (const d of Object.values(all).flat()) {
-      const m = re.exec(d.name);
-      if (m && d.isAvailable) seen.set(Number(m.at(1)), d.name);
-    }
-    [...seen.keys()].sort((a, b) => b - a).slice(0, 2).forEach((k) => console.log(seen.get(k)));
-  ' "${APP_NAME}"
-}
-
 if [ "$#" -gt 0 ]; then
   TARGETS=("$@")
 else
-  TARGETS=()
-  while IFS= read -r line; do [ -n "${line}" ] && TARGETS+=("${line}"); done < <(default_devices)
-  [ "${#TARGETS[@]}" -gt 0 ] || { echo "NO_DEVICE：没有「${APP_NAME} iOS<N>」专用模拟器，先跑 scripts/sim-setup.sh"; exit 1; }
-  [ "${#TARGETS[@]}" -ge 2 ] || log "⚠️  只找到 1 台专用模拟器（${TARGETS[*]}），双系统闸门缺一台——跑 scripts/sim-setup.sh 补建"
+  # 不传设备：从全局模拟器池借一台（满了会排队），退出时归还
+  POOL="${HOME}/.claude/skills/sim-pool/pool.sh"
+  [ -x "${POOL}" ] || { echo "NO_POOL：没有 ${POOL}（全局模拟器池），或手动传 UDID"; exit 1; }
+  POOL_UDID=$("${POOL}" acquire --owner "${PROJ}-e2e" --pid $$ --runtime "${E2E_RUNTIME:-26}") \
+    || { echo "NO_DEVICE：模拟器池借不到设备（pool.sh status 看谁在用）"; exit 1; }
+  trap '"${POOL}" release "${POOL_UDID}" > /dev/null 2>&1' EXIT
+  TARGETS=("${POOL_UDID}")
 fi
 
 total_fail=0

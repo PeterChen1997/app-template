@@ -5,7 +5,7 @@
 #
 # 锚点是 src/app/index.tsx 根 View 的 testID，改名要两边一起改。
 # 单跑：JAVA_HOME=/opt/homebrew/opt/openjdk maestro test --udid <UDID> .maestro/01_smoke.yaml
-# 全套：scripts/e2e-all.sh（Release 包、专用模拟器、双系统，见 TESTING.md）
+# 全套：scripts/e2e-all.sh（Release 包、模拟器池借 iOS 26，见 TESTING.md）
 appId: __BUNDLE_ID__
 tags:
   - smoke

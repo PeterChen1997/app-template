@@ -12,7 +12,7 @@ APP=$(node -p "require('./app.json').expo.name" | tr -cd '[:alnum:]')       # Xc
 BUNDLE_ID=$(node -p "require('./app.json').expo.ios.bundleIdentifier")
 SCHEME_URL=$(node -p "require('./app.json').expo.scheme")
 PORT=$(~/.claude/skills/rn-metro/metro.sh port)                              # 本项目登记的 Metro 端口（不是 8081）
-UDID=<CLAUDE.md「专用模拟器」里本项目的那台>                                  # 不用别的项目的模拟器
+UDID=$(~/.claude/skills/sim-pool/pool.sh acquire --owner "$APP" --pid none)   # 从全局模拟器池借；验完 pool.sh release "$UDID"
 ```
 
 ## 1. prebuild（改了 app.json / plugins / modules / targets / 原生依赖才需要）
